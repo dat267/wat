@@ -25,3 +25,19 @@ wails build -platform windows/amd64
 ```
 * **Output Binary**: `build/bin/wat.exe`
 
+### Binary Compression (UPX)
+To compress the compiled binaries (often reducing their size by 50% to 70%), install the `upx` utility:
+```bash
+# On Arch Linux
+ipkgs upx
+```
+Once installed, append the `-upx` flag to your build commands:
+```bash
+# Compressed Linux Build
+wails build -tags webkit2_41 -upx
+
+# Compressed Windows Build
+wails build -platform windows/amd64 -upx
+```
+
+
