@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+:root {
+	--bg-base: #f8fafc;
+	--bg-sidebar: rgba(241, 245, 249, 0.7);
+	--bg-surface: rgba(226, 232, 240, 0.5);
+	--bg-card: rgba(203, 213, 225, 0.4);
+	--text-muted: #64748b;
+	--text-main: #0f172a;
+	--text-white: #0f172a;
+	--color-primary: #3b82f6;
+	--color-glow: rgba(59, 130, 246, 0.08);
+}
+:root.dark {
+	--bg-base: #060913;
+	--bg-sidebar: rgba(10, 15, 30, 0.7);
+	--bg-surface: rgba(16, 22, 42, 0.5);
+	--bg-card: rgba(22, 30, 58, 0.4);
+	--text-muted: #94a3b8;
+	--text-main: #f1f5f9;
+	--text-white: #ffffff;
+	--color-primary: #3b82f6;
+	--color-glow: rgba(59, 130, 246, 0.2);
+}
+@theme {
+	--font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
+	--color-base: var(--bg-base);
+	--color-sidebar: var(--bg-sidebar);
+	--color-surface: var(--bg-surface);
+	--color-card: var(--bg-card);
+	--color-glow: var(--color-glow);
+	--color-slate-950: var(--bg-base);
+	--color-slate-900: var(--bg-sidebar);
+	--color-slate-800: var(--bg-surface);
+	--color-slate-700: var(--bg-card);
+	--color-slate-500: var(--text-muted);
+	--color-slate-400: var(--text-muted);
+	--color-slate-300: var(--text-main);
+	--color-slate-200: var(--text-main);
+	--color-slate-100: var(--text-main);
+	--color-white: var(--text-white);
+}
+html, body, #app {
+	background-color: var(--bg-base);
+	color: var(--text-main);
+	font-family: var(--font-sans);
+	margin: 0;
+	padding: 0;
+	width: 100vw;
+	height: 100vh;
+	overflow: hidden;
+}
