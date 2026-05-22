@@ -1,19 +1,27 @@
-# README
+# wat (Automation Toolbox)
 
-## About
-
-This is the official Wails React-TS template.
-
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
+A clean, modern, high-performance desktop toolbox built with **Wails (Go + Svelte 5 + TypeScript + Vite)**.
 
 ## Live Development
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+To run the application in live development mode:
+```bash
+wails dev
+```
 
-## Building
+## Production Building
 
-To build a redistributable, production mode package, use `wails build`.
+### Modern Linux (Arch Linux, Fedora, Ubuntu 23.04+)
+Modern distributions use **WebKit2GTK 4.1** (as `webkit2gtk-4.0` has been deprecated and removed). To compile for these platforms, build with the `webkit2_41` tag:
+```bash
+wails build -tags webkit2_41
+```
+* **Output Binary**: `build/bin/wat`
+
+### Windows Cross-Compilation
+To cross-compile a standalone single-file Windows executable (`wat.exe`) from your Linux environment, ensure you have the `mingw-w64-gcc` toolchain installed, and run:
+```bash
+wails build -platform windows/amd64
+```
+* **Output Binary**: `build/bin/wat.exe`
+
