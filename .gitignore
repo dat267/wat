@@ -1,4 +1,15 @@
+# Build output
 build/bin
+
+# Frontend
 node_modules
 frontend/dist
-start-tunnel.sh
+frontend/package.json.md5
+
+# Logs
+*.log
+
+
+# OS files
+.DS_Store
+Thumbs.db

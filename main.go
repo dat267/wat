@@ -11,6 +11,10 @@ import (
 var assets embed.FS
 
 func main() {
+	if isCLIMode() {
+		runCLI()
+		return
+	}
 	app := NewApp()
 	err := wails.Run(&options.App{
 		Title:  "wat",

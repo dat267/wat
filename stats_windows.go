@@ -8,6 +8,11 @@ import (
 	"unsafe"
 )
 
+func getDeviceID(_ string) (uint64, error) {
+	return 0, nil
+}
+
+
 var (
 	modkernel32              = windows.NewLazySystemDLL("kernel32.dll")
 	procGetSystemTimes       = modkernel32.NewProc("GetSystemTimes")

@@ -18,90 +18,84 @@
 		const interval = setInterval(fetchStats, 2000);
 		return () => clearInterval(interval);
 	});
-	function getProgressBarColor(val: number) {
-		if (val > 85) return 'bg-rose-500 shadow-rose-500/40 text-rose-500';
-		if (val > 65) return 'bg-amber-500 shadow-amber-500/40 text-amber-500';
-		return 'bg-blue-500 shadow-blue-500/40 text-blue-500';
+	function getBarColor(val: number) {
+		if (val > 85) return 'bg-rose-500/80';
+		if (val > 65) return 'bg-amber-500/80';
+		return 'bg-blue-500/80';
 	}
 </script>
-<div class="space-y-6">
+<div class="space-y-8 select-none max-w-5xl">
 	<div>
-		<h1 class="text-3xl font-extrabold tracking-tight text-white mb-1.5">System Dashboard</h1>
-		<p class="text-slate-400 text-sm">Real-time monitoring of local environment and hardware resource metrics.</p>
+		<h1 class="text-2xl font-bold tracking-tight text-white mb-1">System Metrics</h1>
+		<p class="text-slate-400 text-xs">Real-time system telemetry and environment resource utilization.</p>
 	</div>
 	{#if error}
-		<div class="text-rose-400 text-sm font-medium">{error}</div>
+		<div class="text-rose-400 text-xs font-semibold bg-rose-500/5 border border-rose-500/10 px-3 py-2 rounded-xl">{error}</div>
 	{/if}
-	<div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-		<div class="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/20 hover:shadow-xl hover:shadow-blue-500/5">
-			<div class="flex justify-between items-center mb-4">
-				<span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">CPU UTILIZATION</span>
-				<div class="p-2.5 rounded-xl bg-white/5 text-blue-500">
-					<Cpu size={18} />
-				</div>
+	<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+		<div class="bg-white/[0.01] border border-white/[0.03] rounded-2xl p-6 transition-all duration-300 hover:border-white/[0.06] hover:bg-white/[0.02]">
+			<div class="flex justify-between items-center mb-5">
+				<span class="text-xs font-semibold text-slate-300 tracking-wider uppercase font-mono">CPU Load</span>
+				<Cpu size={14} class="text-slate-400" />
 			</div>
-			<div class="flex items-baseline gap-1.5 mb-4">
-				<span class="text-4xl font-bold tracking-tight text-white">{stats ? stats.cpuPercent.toFixed(1) : '0.0'}</span>
-				<span class="text-sm text-slate-500 font-semibold">%</span>
+			<div class="flex items-baseline gap-1 mb-4">
+				<span class="text-3xl font-light tracking-tight text-white">{stats ? stats.cpuPercent.toFixed(1) : '0.0'}</span>
+				<span class="text-xs text-slate-400 font-semibold">%</span>
 			</div>
-			<div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+			<div class="h-[3px] bg-white/[0.03] rounded-full overflow-hidden">
 				<div
-					class="h-full rounded-full transition-all duration-1000 shadow-[0_0_10px] {stats ? getProgressBarColor(stats.cpuPercent) : 'bg-blue-500 shadow-blue-500/40'}"
+					class="h-full rounded-full transition-all duration-1000 {stats ? getBarColor(stats.cpuPercent) : 'bg-blue-500/80'}"
 					style="width: {stats ? Math.min(stats.cpuPercent, 100) : 0}%"
 				></div>
 			</div>
 		</div>
-		<div class="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/20 hover:shadow-xl hover:shadow-blue-500/5">
-			<div class="flex justify-between items-center mb-4">
-				<span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">SYSTEM MEMORY</span>
-				<div class="p-2.5 rounded-xl bg-white/5 text-emerald-500">
-					<HardDrive size={18} />
-				</div>
+		<div class="bg-white/[0.01] border border-white/[0.03] rounded-2xl p-6 transition-all duration-300 hover:border-white/[0.06] hover:bg-white/[0.02]">
+			<div class="flex justify-between items-center mb-5">
+				<span class="text-xs font-semibold text-slate-300 tracking-wider uppercase font-mono">Memory</span>
+				<HardDrive size={14} class="text-slate-400" />
 			</div>
-			<div class="flex items-baseline gap-1.5 mb-4">
-				<span class="text-4xl font-bold tracking-tight text-white">{stats ? stats.memoryPercent.toFixed(1) : '0.0'}</span>
-				<span class="text-sm text-slate-500 font-semibold">%</span>
+			<div class="flex items-baseline gap-1 mb-4">
+				<span class="text-3xl font-light tracking-tight text-white">{stats ? stats.memoryPercent.toFixed(1) : '0.0'}</span>
+				<span class="text-xs text-slate-400 font-semibold">%</span>
 			</div>
-			<div class="h-1.5 bg-white/5 rounded-full overflow-hidden mb-3">
+			<div class="h-[3px] bg-white/[0.03] rounded-full overflow-hidden mb-3">
 				<div
-					class="h-full rounded-full transition-all duration-1000 shadow-[0_0_10px] {stats ? getProgressBarColor(stats.memoryPercent) : 'bg-emerald-500 shadow-emerald-500/40'}"
+					class="h-full rounded-full transition-all duration-1000 {stats ? getBarColor(stats.memoryPercent) : 'bg-blue-500/80'}"
 					style="width: {stats ? Math.min(stats.memoryPercent, 100) : 0}%"
 				></div>
 			</div>
-			<div class="text-[11px] text-slate-400 font-medium">
-				{stats ? `${stats.memoryUsed.toFixed(1)} GB used of ${stats.memoryTotal.toFixed(1)} GB` : '-'}
+			<div class="text-xs text-slate-300 font-mono">
+				{stats ? `${stats.memoryUsed.toFixed(1)} GB of ${stats.memoryTotal.toFixed(1)} GB` : '-'}
 			</div>
 		</div>
-		<div class="bg-slate-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/20 hover:shadow-xl hover:shadow-blue-500/5">
-			<div class="flex justify-between items-center mb-4">
-				<span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">DISK CAPACITY (ROOT)</span>
-				<div class="p-2.5 rounded-xl bg-white/5 text-violet-500">
-					<HardDrive size={18} />
-				</div>
+		<div class="bg-white/[0.01] border border-white/[0.03] rounded-2xl p-6 transition-all duration-300 hover:border-white/[0.06] hover:bg-white/[0.02]">
+			<div class="flex justify-between items-center mb-5">
+				<span class="text-xs font-semibold text-slate-300 tracking-wider uppercase font-mono">Storage Capacity</span>
+				<HardDrive size={14} class="text-slate-400" />
 			</div>
-			<div class="flex items-baseline gap-1.5 mb-4">
-				<span class="text-4xl font-bold tracking-tight text-white">{stats ? stats.diskPercent.toFixed(1) : '0.0'}</span>
-				<span class="text-sm text-slate-500 font-semibold">%</span>
+			<div class="flex items-baseline gap-1 mb-4">
+				<span class="text-3xl font-light tracking-tight text-white">{stats ? stats.diskPercent.toFixed(1) : '0.0'}</span>
+				<span class="text-xs text-slate-400 font-semibold">%</span>
 			</div>
-			<div class="h-1.5 bg-white/5 rounded-full overflow-hidden mb-3">
+			<div class="h-[3px] bg-white/[0.03] rounded-full overflow-hidden mb-3">
 				<div
-					class="h-full rounded-full transition-all duration-1000 shadow-[0_0_10px] {stats ? getProgressBarColor(stats.diskPercent) : 'bg-violet-500 shadow-violet-500/40'}"
+					class="h-full rounded-full transition-all duration-1000 {stats ? getBarColor(stats.diskPercent) : 'bg-blue-500/80'}"
 					style="width: {stats ? Math.min(stats.diskPercent, 100) : 0}%"
 				></div>
 			</div>
-			<div class="text-[11px] text-slate-400 font-medium">
-				{stats ? `${stats.diskUsed.toFixed(1)} GB used of ${stats.diskTotal.toFixed(1)} GB` : '-'}
+			<div class="text-xs text-slate-300 font-mono">
+				{stats ? `${stats.diskUsed.toFixed(1)} GB of ${stats.diskTotal.toFixed(1)} GB` : '-'}
 			</div>
 		</div>
 	</div>
-	<div class="bg-slate-900/30 backdrop-blur-md border border-white/5 rounded-2xl p-5 flex items-center gap-4 transition-all hover:border-white/10">
-		<div class="p-3 rounded-xl bg-amber-500/10 text-amber-500">
-			<Clock size={22} />
+	<div class="bg-white/[0.01] border border-white/[0.03] rounded-2xl p-5 flex items-center gap-4 transition-all hover:border-white/[0.06]">
+		<div class="p-2.5 rounded-xl bg-slate-900/50 text-slate-400">
+			<Clock size={16} />
 		</div>
 		<div>
-			<h3 class="text-sm font-semibold text-white">Host System Uptime</h3>
-			<p class="text-slate-400 text-xs mt-0.5">
-				Operating continuous duration: <strong class="text-white ml-1 font-mono">{stats ? stats.uptime : 'Loading...'}</strong>
+			<h3 class="text-xs font-semibold text-white">System Uptime</h3>
+			<p class="text-slate-300 text-xs mt-0.5 font-mono">
+				Continuous uptime: <strong class="text-white ml-1">{stats ? stats.uptime : 'Loading...'}</strong>
 			</p>
 		</div>
 	</div>

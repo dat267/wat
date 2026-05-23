@@ -9,6 +9,14 @@ import (
 	"syscall"
 )
 
+func getDeviceID(path string) (uint64, error) {
+	var st syscall.Stat_t
+	if err := syscall.Stat(path, &st); err != nil {
+		return 0, err
+	}
+	return st.Dev, nil
+}
+
 func getCPUTimes() (idle, total uint64, err error) {
 	data, err := os.ReadFile("/proc/stat")
 	if err != nil {

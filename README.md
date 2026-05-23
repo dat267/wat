@@ -2,6 +2,30 @@
 
 A clean, modern, high-performance desktop toolbox built with **Wails (Go + Svelte 5 + TypeScript + Vite)**.
 
+## CLI Usage
+
+The binary is a GUI + CLI hybrid. Invoking it with a subcommand runs headless and exits; no arguments launches the GUI.
+
+```
+wat <command> [options]
+
+Commands:
+  stats                   Print system stats (CPU, RAM, Disk, Uptime)
+  ping    <host>          Ping a host 3 times
+  ports   <host>          Scan common ports on a host
+  disk    <path>          List large files under a path (--min-mb, default 50)
+  script  <name>          Run a built-in script: docker | disk | network | services
+```
+
+Examples:
+```bash
+wat stats
+wat ping 1.1.1.1
+wat ports localhost
+wat disk /home --min-mb 100
+wat script docker
+```
+
 ## Live Development
 
 To run the application in live development mode:

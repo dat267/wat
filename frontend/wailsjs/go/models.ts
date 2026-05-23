@@ -1,17 +1,35 @@
 export namespace main {
 	
-	export class LargeFileInfo {
-	    path: string;
-	    size: number;
+	export class AppConfig {
+	    apiKeys: Record<string, string>;
+	    settings: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
-	        return new LargeFileInfo(source);
+	        return new AppConfig(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.apiKeys = source["apiKeys"];
+	        this.settings = source["settings"];
+	    }
+	}
+	export class DiskEntry {
+	    name: string;
+	    path: string;
+	    size: number;
+	    isDir: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiskEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
 	        this.path = source["path"];
 	        this.size = source["size"];
+	        this.isDir = source["isDir"];
 	    }
 	}
 	export class SystemStats {

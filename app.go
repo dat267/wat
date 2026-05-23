@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -108,16 +109,26 @@ func (a *App) PingHost(host string) (string, error) {
 	out, _ := cmd.CombinedOutput()
 	return string(out), nil
 }
-func (a *App) ScanPorts(host string, ports []int) ([]int, error) {
+func (a *App) ScanPorts(host string, ports []int, timeoutMs int, concurrency int) ([]int, error) {
+	if timeoutMs <= 0 {
+		timeoutMs = 500
+	}
+	if concurrency <= 0 {
+		concurrency = 1024
+	}
 	var openPorts []int
 	var mu sync.Mutex
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, concurrency)
+	timeout := time.Duration(timeoutMs) * time.Millisecond
 	for _, port := range ports {
 		wg.Add(1)
 		go func(p int) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			address := net.JoinHostPort(host, fmt.Sprintf("%d", p))
-			conn, err := net.DialTimeout("tcp", address, 150*time.Millisecond)
+			conn, err := net.DialTimeout("tcp", address, timeout)
 			if err == nil {
 				conn.Close()
 				mu.Lock()
@@ -131,37 +142,58 @@ func (a *App) ScanPorts(host string, ports []int) ([]int, error) {
 	return openPorts, nil
 }
 
-type LargeFileInfo struct {
-	Path string `json:"path"`
-	Size int64  `json:"size"`
+type DiskEntry struct {
+	Name  string `json:"name"`
+	Path  string `json:"path"`
+	Size  int64  `json:"size"`
+	IsDir bool   `json:"isDir"`
 }
 
-func (a *App) ScanDirectoryForLargeFiles(dirPath string, minSizeMB int) ([]LargeFileInfo, error) {
-	var files []LargeFileInfo
-	minSizeBytes := int64(minSizeMB) * 1024 * 1024
-	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
+func (a *App) RankDirectory(dirPath string) ([]DiskEntry, error) {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	var results []DiskEntry
+	for _, entry := range entries {
+		fullPath := filepath.Join(dirPath, entry.Name())
+		size, _ := dirSize(fullPath)
+		results = append(results, DiskEntry{
+			Name:  entry.Name(),
+			Path:  fullPath,
+			Size:  size,
+			IsDir: entry.IsDir(),
+		})
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Size > results[j].Size
+	})
+	return results, nil
+}
+
+func dirSize(path string) (int64, error) {
+	parentDev, _ := getDeviceID(filepath.Dir(path))
+	selfDev, err := getDeviceID(path)
+	if err == nil && parentDev != 0 && selfDev != parentDev {
+		return 0, nil
+	}
+	var total int64
+	err = filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
+		if d.IsDir() && p != path {
+			dev, err := getDeviceID(p)
+			if err == nil && selfDev != 0 && dev != selfDev {
+				return filepath.SkipDir
+			}
+		}
 		if !d.IsDir() {
-			info, err := d.Info()
-			if err == nil && info.Size() >= minSizeBytes {
-				files = append(files, LargeFileInfo{
-					Path: path,
-					Size: info.Size(),
-				})
+			if info, err := d.Info(); err == nil {
+				total += info.Size()
 			}
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Size > files[j].Size
-	})
-	if len(files) > 100 {
-		files = files[:100]
-	}
-	return files, nil
+	return total, err
 }
