@@ -12,6 +12,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type SystemStats struct {
@@ -28,6 +30,7 @@ type App struct {
 	ctx          context.Context
 	lastCPUIDle  uint64
 	lastCPUTotal uint64
+	isGUI        bool
 }
 
 func NewApp() *App {
@@ -35,6 +38,10 @@ func NewApp() *App {
 }
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	initStore()
+	initLogging(a)
+	startScheduler(a)
+	logInfo("wat desktop application starting up", nil)
 	if idle, total, err := getCPUTimes(); err == nil {
 		a.lastCPUIDle = idle
 		a.lastCPUTotal = total
@@ -196,4 +203,10 @@ func dirSize(path string) (int64, error) {
 		return nil
 	})
 	return total, err
+}
+
+func (a *App) BroadcastLog(msg string) {
+	if a.isGUI && a.ctx != nil {
+		wailsRuntime.EventsEmit(a.ctx, "log", msg)
+	}
 }

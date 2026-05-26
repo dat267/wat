@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Moon, Sun, Monitor, Info, ShieldCheck, Key, Eye, EyeOff, Save, CheckCircle, Plus, Trash2 } from '@lucide/svelte';
+	import { Moon, Sun, Monitor, Info, ShieldCheck, Key, Eye, EyeOff, Save, CheckCircle, Plus, Trash2, HelpCircle, Database } from '@lucide/svelte';
 	import { themeState, type Theme } from '../theme.svelte';
-	import { GetConfig, SetConfigValue, ResetConfig, DeleteConfigValue } from '../../wailsjs/go/main/App';
+	import { GetConfig, SetConfigValue, ResetConfig, DeleteConfigValue, AskAI, StoreList, StoreDelete } from '../../wailsjs/go/main/App';
+	import { toastState } from './toast.svelte';
 	const themes = [
 		{ key: 'dark' as Theme, label: 'Dark', icon: Moon, desc: 'Obsidian space look' },
 		{ key: 'light' as Theme, label: 'Light', icon: Sun, desc: 'Clean, highly readable' },
@@ -15,9 +16,13 @@
 	let showAnthropic = $state(false);
 	let loading = $state(true);
 	let saving = $state(false);
-	let savedMessage = $state<string | null>(null);
 	let customKeysList = $state<{ key: string; value: string }[]>([]);
 	let confirmDelete = $state(false);
+	let validatingOpenAI = $state(false);
+	let validatingAnthropic = $state(false);
+	$effect(() => {
+		loadSecureConfig();
+	});
 	async function performResetConfig() {
 		try {
 			await ResetConfig();
@@ -28,15 +33,11 @@
 			customKey = '';
 			customVal = '';
 			themeState.current = 'system';
-			savedMessage = 'Configuration reset successfully!';
-			setTimeout(() => savedMessage = null, 3000);
+			toastState.add('success', 'Configuration reset successfully!');
 		} catch (e) {
 			console.error('Failed to reset config file', e);
 		}
 	}
-	$effect(() => {
-		loadSecureConfig();
-	});
 	async function loadSecureConfig() {
 		try {
 			const cfg = await GetConfig();
@@ -56,15 +57,13 @@
 	}
 	async function saveKeys() {
 		saving = true;
-		savedMessage = null;
 		try {
 			await SetConfigValue('apiKeys', 'openai', openaiKey);
 			await SetConfigValue('apiKeys', 'anthropic', anthropicKey);
 			await SetConfigValue('settings', 'theme', themeState.current);
-			savedMessage = 'Configuration saved securely!';
-			setTimeout(() => savedMessage = null, 3000);
+			toastState.add('success', 'Configuration saved securely!');
 		} catch (e: any) {
-			console.error('Failed to save config', e);
+			toastState.add('error', 'Failed to save configuration.');
 		} finally {
 			saving = false;
 		}
@@ -76,6 +75,7 @@
 			customKey = '';
 			customVal = '';
 			await loadSecureConfig();
+			toastState.add('success', 'Custom parameter stored.');
 		} catch (e) {
 			console.error(e);
 		}
@@ -84,6 +84,7 @@
 		try {
 			await DeleteConfigValue('apiKeys', k);
 			await loadSecureConfig();
+			toastState.add('info', `Removed ${k}.`);
 		} catch (e) {
 			console.error(e);
 		}
@@ -96,6 +97,60 @@
 			console.error(e);
 		}
 	}
+	async function testOpenAIKey() {
+		if (!openaiKey.trim()) return;
+		validatingOpenAI = true;
+		try {
+			const res = await AskAI('openai', '', 'State "Active" and nothing else.', 'Ping');
+			if (res.toLowerCase().includes('active')) {
+				toastState.add('success', 'OpenAI API key is valid!');
+			} else {
+				throw new Error();
+			}
+		} catch (e) {
+			toastState.add('error', 'Failed to validate OpenAI API key.');
+		} finally {
+			validatingOpenAI = false;
+		}
+	}
+	async function testAnthropicKey() {
+		if (!anthropicKey.trim()) return;
+		validatingAnthropic = true;
+		try {
+			const res = await AskAI('anthropic', '', 'State "Active" and nothing else.', 'Ping');
+			if (res.toLowerCase().includes('active')) {
+				toastState.add('success', 'Anthropic API key is valid!');
+			} else {
+				throw new Error();
+			}
+		} catch (e) {
+			toastState.add('error', 'Failed to validate Anthropic API key.');
+		} finally {
+			validatingAnthropic = false;
+		}
+	}
+	let dbBucket = $state<'custom_scripts' | 'scheduler_history' | 'port_scanner_history' | 'ai_chat_history'>('custom_scripts');
+	let dbEntries = $state<{ key: string; value: string }[]>([]);
+	async function loadDbInspector() {
+		try {
+			const raw = await StoreList(dbBucket);
+			dbEntries = raw ? Object.entries(raw).map(([k, v]) => ({ key: k, value: v })) : [];
+		} catch (e) {
+			console.error(e);
+		}
+	}
+	async function deleteDbEntry(key: string) {
+		try {
+			await StoreDelete(dbBucket, key);
+			await loadDbInspector();
+			toastState.add('info', 'Deleted database entry.');
+		} catch (e) {
+			console.error(e);
+		}
+	}
+	$effect(() => {
+		loadDbInspector();
+	});
 </script>
 <div class="space-y-8 select-none max-w-5xl">
 	<div>
@@ -112,14 +167,19 @@
 						<Key size={13} class="text-slate-400" />
 						<span>Secure Credentials</span>
 					</h3>
-					<p class="text-slate-300 text-xs leading-relaxed">
+					<p class="text-slate-300 text-xs leading-relaxed font-mono">
 						API keys are encrypted locally using owner-only permissions (<code class="font-mono bg-slate-950 px-1 rounded text-slate-300">0600</code>).
 					</p>
 					<div class="space-y-4">
-						<div class="space-y-1.5">
+						<div class="space-y-1.5 font-mono">
 							<div class="flex items-center justify-between">
-								<label for="settings-openai-input" class="text-xs font-semibold text-slate-300 uppercase tracking-wider font-mono">OpenAI API Key</label>
-								<span class="text-[8px] font-bold text-blue-400 uppercase tracking-widest px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 font-mono">Secret</span>
+								<label for="settings-openai-input" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">OpenAI API Key</label>
+								<div class="flex gap-2">
+									<button onclick={testOpenAIKey} disabled={validatingOpenAI || !openaiKey} class="text-[8px] font-bold text-blue-400 uppercase tracking-widest px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 cursor-pointer">
+										{validatingOpenAI ? 'Checking...' : 'TEST KEY'}
+									</button>
+									<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-500/10 border border-slate-500/20">Secret</span>
+								</div>
 							</div>
 							<div class="relative">
 								<input
@@ -127,7 +187,7 @@
 									type={showOpenai ? 'text' : 'password'}
 									bind:value={openaiKey}
 									placeholder="sk-..."
-									class="w-full bg-white/[0.01] border border-white/[0.04] rounded-xl pl-4 pr-10 py-2.5 text-xs text-white focus:outline-none focus:border-white/[0.08] font-mono transition-all"
+									class="w-full bg-white/[0.01] border border-white/[0.04] rounded-xl pl-4 pr-10 py-2.5 text-xs text-white focus:outline-none focus:border-white/[0.08] transition-all"
 								/>
 								<button
 									onclick={() => showOpenai = !showOpenai}
@@ -141,10 +201,15 @@
 								</button>
 							</div>
 						</div>
-						<div class="space-y-1.5">
+						<div class="space-y-1.5 font-mono">
 							<div class="flex items-center justify-between">
-								<label for="settings-anthropic-input" class="text-xs font-semibold text-slate-300 uppercase tracking-wider font-mono">Anthropic API Key</label>
-								<span class="text-[8px] font-bold text-blue-400 uppercase tracking-widest px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 font-mono">Secret</span>
+								<label for="settings-anthropic-input" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Anthropic API Key</label>
+								<div class="flex gap-2">
+									<button onclick={testAnthropicKey} disabled={validatingAnthropic || !anthropicKey} class="text-[8px] font-bold text-blue-400 uppercase tracking-widest px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 cursor-pointer">
+										{validatingAnthropic ? 'Checking...' : 'TEST KEY'}
+									</button>
+									<span class="text-[8px] font-bold text-slate-500 uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-500/10 border border-slate-500/20">Secret</span>
+								</div>
 							</div>
 							<div class="relative">
 								<input
@@ -152,7 +217,7 @@
 									type={showAnthropic ? 'text' : 'password'}
 									bind:value={anthropicKey}
 									placeholder="sk-ant-..."
-									class="w-full bg-white/[0.01] border border-white/[0.04] rounded-xl pl-4 pr-10 py-2.5 text-xs text-white focus:outline-none focus:border-white/[0.08] font-mono transition-all"
+									class="w-full bg-white/[0.01] border border-white/[0.04] rounded-xl pl-4 pr-10 py-2.5 text-xs text-white focus:outline-none focus:border-white/[0.08] transition-all"
 								/>
 								<button
 									onclick={() => showAnthropic = !showAnthropic}
@@ -196,7 +261,7 @@
 						{#if customKeysList.length > 0}
 							<div class="bg-white/[0.005] border border-white/[0.03] rounded-xl divide-y divide-white/[0.02] max-h-40 overflow-y-auto font-mono">
 								{#each customKeysList as item}
-									<div class="flex items-center justify-between px-3 py-2.5">
+									<div class="flex items-center justify-between px-3 py-2.5 font-mono">
 										<span class="text-xs text-slate-300">{item.key}</span>
 										<div class="flex items-center gap-3">
 											<span class="text-xs text-slate-400">[encrypted]</span>
@@ -213,13 +278,7 @@
 						{/if}
 					</div>
 					<div class="flex items-center justify-between border-t border-white/[0.03] pt-4">
-						{#if savedMessage}
-							<div class="text-emerald-400 text-xs font-medium flex items-center gap-1.5">
-								<CheckCircle size={12} /> {savedMessage}
-							</div>
-						{:else}
-							<div></div>
-						{/if}
+						<div></div>
 						<button
 							onclick={saveKeys}
 							disabled={saving}
@@ -228,6 +287,47 @@
 							<Save size={12} /> SAVE CONFIG
 						</button>
 					</div>
+				</div>
+				<div class="bg-white/[0.01] border border-white/[0.03] rounded-2xl p-6 space-y-5">
+					<h3 class="text-xs font-semibold text-white flex items-center gap-2 pb-3 border-b border-white/[0.03]">
+						<Database size={13} class="text-slate-400" />
+						<span>Database Inspector</span>
+					</h3>
+					<p class="text-slate-300 text-xs leading-relaxed font-mono">
+						Inspect and manage structured records persisted inside the CGO-free JSON local store.
+					</p>
+					<div class="flex items-center justify-between gap-4 font-mono">
+						<span class="text-[10px] text-slate-400 uppercase">Inspect Bucket</span>
+						<select
+							bind:value={dbBucket}
+							class="bg-[#121726]/80 border border-white/[0.04] rounded-xl px-3 py-1.5 text-[10px] text-slate-300 focus:outline-none"
+						>
+							<option value="custom_scripts">custom_scripts</option>
+							<option value="scheduler_history">scheduler_history</option>
+							<option value="port_scanner_history">port_scanner_history</option>
+							<option value="ai_chat_history">ai_chat_history</option>
+						</select>
+					</div>
+					{#if dbEntries.length === 0}
+						<div class="text-slate-600 text-[10px] font-mono text-center py-6">No records found in this bucket.</div>
+					{:else}
+						<div class="bg-white/[0.005] border border-white/[0.03] rounded-xl divide-y divide-white/[0.02] max-h-40 overflow-y-auto font-mono text-[10px]">
+							{#each dbEntries as entry}
+								<div class="flex items-center justify-between px-3.5 py-2.5">
+									<span class="text-slate-300 truncate max-w-[150px] font-bold" title={entry.key}>{entry.key}</span>
+									<div class="flex items-center gap-3">
+										<span class="text-slate-500 truncate max-w-[200px]" title={entry.value}>{entry.value}</span>
+										<button
+											onclick={() => deleteDbEntry(entry.key)}
+											class="text-rose-500 hover:text-rose-400 p-1 cursor-pointer transition-colors"
+										>
+											<Trash2 size={11} />
+										</button>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
 				</div>
 				<div class="bg-rose-950/5 border border-rose-500/10 rounded-2xl p-6 space-y-4">
 					<h3 class="text-xs font-semibold text-rose-400 flex items-center gap-2.5 pb-3 border-b border-rose-500/10">
@@ -240,7 +340,7 @@
 					<div class="flex justify-end">
 						{#if confirmDelete}
 							<div class="flex items-center gap-2 font-mono">
-								<span class="text-[10px] text-rose-400 font-medium">Are you sure?</span>
+								<span class="text-[10px] text-rose-400 font-medium font-mono">Are you sure?</span>
 								<button
 									onclick={performResetConfig}
 									class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-semibold cursor-pointer transition-all active:scale-95"
@@ -297,19 +397,19 @@
 					<div class="flex flex-col gap-3 text-xs font-mono">
 						<div class="flex justify-between border-b border-white/[0.02] pb-2.5">
 							<span class="text-slate-300">Wails Version</span>
-							<strong class="text-slate-300">v2.12.0</strong>
+							<strong class="text-slate-300 font-bold">v2.12.0</strong>
 						</div>
 						<div class="flex justify-between border-b border-white/[0.02] pb-2.5">
 							<span class="text-slate-300">Frontend Engine</span>
-							<strong class="text-slate-300">Svelte 5 + Vite</strong>
+							<strong class="text-slate-300 font-bold">Svelte 5 + Vite</strong>
 						</div>
 						<div class="flex justify-between border-b border-white/[0.02] pb-2.5">
 							<span class="text-slate-300">Backend Language</span>
-							<strong class="text-slate-300">Go (1.26.3)</strong>
+							<strong class="text-slate-300 font-bold">Go (1.23.0)</strong>
 						</div>
 						<div class="flex justify-between pb-1">
 							<span class="text-slate-300">Runtime Env</span>
-							<strong class="text-emerald-500 flex items-center gap-1">
+							<strong class="text-emerald-500 flex items-center gap-1 font-bold">
 								<ShieldCheck size={12} /> OS Native
 							</strong>
 						</div>

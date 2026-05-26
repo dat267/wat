@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -18,6 +19,9 @@ Commands:
   ports <host>    Scan common ports on a host
   disk  [path]    Rank files and folders by size (default: .)
   config          Manage secure configuration and API keys
+  ai    <prompt>  Query local AI assistant (requires OpenAI/Anthropic key)
+  logs            Print local application logs
+  run   <script>  Run system script (docker, disk, network, services)
 
 Run 'wat <command> -h' for command-specific options.
 With no command, the GUI is launched.
@@ -28,7 +32,7 @@ func isCLIMode() bool {
 		return false
 	}
 	switch os.Args[1] {
-	case "stats", "ports", "disk", "config", "help", "-h", "--help":
+	case "stats", "ports", "disk", "config", "ai", "logs", "run", "help", "-h", "--help":
 		return true
 	}
 	return false
@@ -49,6 +53,12 @@ func runCLI() {
 		cmdDisk(app)
 	case "config":
 		cmdConfig(app)
+	case "ai":
+		cmdAI(app)
+	case "logs":
+		cmdLogs(app)
+	case "run":
+		cmdRun(app)
 	default:
 		fmt.Print(cliUsage)
 		os.Exit(0)
@@ -356,4 +366,54 @@ func cmdConfig(app *App) {
 		fs.Usage()
 		os.Exit(1)
 	}
+}
+
+func cmdAI(app *App) {
+	if len(os.Args) < 3 {
+		fmt.Println("usage: wat ai <prompt>")
+		os.Exit(1)
+	}
+	prompt := strings.Join(os.Args[2:], " ")
+	cfg, err := loadConfig()
+	if err != nil {
+		fatalf("failed to load configuration: %v\n", err)
+	}
+	provider := "anthropic"
+	if cfg.APIKeys["anthropic"] == "" && cfg.APIKeys["openai"] != "" {
+		provider = "openai"
+	}
+	fmt.Printf("Querying %s...\n", provider)
+	app.startup(context.Background())
+	res, err := app.AskAI(provider, "", "You are a helpful shell assistant. Keep your answer brief, direct and informative.", prompt)
+	if err != nil {
+		fatalf("AI error: %v\n", err)
+	}
+	fmt.Println(res)
+}
+
+func cmdLogs(app *App) {
+	path, err := getConfigPath()
+	if err != nil {
+		fatalf("failed to get config path: %v\n", err)
+	}
+	logPath := filepath.Join(filepath.Dir(path), "app.log")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		fatalf("failed to read logs: %v\n", err)
+	}
+	fmt.Print(string(data))
+}
+
+func cmdRun(app *App) {
+	if len(os.Args) < 3 {
+		fmt.Println("usage: wat run <script> (docker | disk | network | services)")
+		os.Exit(1)
+	}
+	script := os.Args[2]
+	app.startup(context.Background())
+	out, err := app.ExecuteScript(script)
+	if err != nil {
+		fatalf("script failed: %v\n", err)
+	}
+	fmt.Print(out)
 }

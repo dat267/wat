@@ -1,14 +1,15 @@
 <script lang="ts">
-	import { Cpu, HardDrive, Clock } from '@lucide/svelte';
-	import { GetSystemStats } from '../../wailsjs/go/main/App';
+	import { Cpu, HardDrive, Clock, Terminal } from '@lucide/svelte';
+	import { GetSystemStats, GetLogs } from '../../wailsjs/go/main/App';
+	import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 	import type { main } from '../../wailsjs/go/models';
 	let stats = $state<main.SystemStats | null>(null);
+	let logs = $state<string[]>([]);
 	let error = $state<string | null>(null);
 	$effect(() => {
 		const fetchStats = async () => {
 			try {
-				const data = await GetSystemStats();
-				stats = data;
+				stats = await GetSystemStats();
 				error = null;
 			} catch (err) {
 				error = 'Failed to fetch system metrics';
@@ -16,12 +17,37 @@
 		};
 		fetchStats();
 		const interval = setInterval(fetchStats, 2000);
-		return () => clearInterval(interval);
+		loadInitialLogs();
+		EventsOn('log', handleNewLog);
+		return () => {
+			clearInterval(interval);
+			EventsOff('log');
+		};
 	});
+	async function loadInitialLogs() {
+		try {
+			const initial = await GetLogs();
+			if (initial) logs = initial;
+		} catch (e) {
+			console.error(e);
+		}
+	}
+	function handleNewLog(msg: string) {
+		logs.push(msg);
+		if (logs.length > 30) logs.shift();
+	}
 	function getBarColor(val: number) {
 		if (val > 85) return 'bg-rose-500/80';
 		if (val > 65) return 'bg-amber-500/80';
 		return 'bg-blue-500/80';
+	}
+	function cleanLogLine(raw: string): string {
+		try {
+			const parsed = JSON.parse(raw);
+			return `[${parsed.time}] [${parsed.level}] ${parsed.msg}`;
+		} catch (e) {
+			return raw.trim();
+		}
 	}
 </script>
 <div class="space-y-8 select-none max-w-5xl">
@@ -97,6 +123,21 @@
 			<p class="text-slate-300 text-xs mt-0.5 font-mono">
 				Continuous uptime: <strong class="text-white ml-1">{stats ? stats.uptime : 'Loading...'}</strong>
 			</p>
+		</div>
+	</div>
+	<div class="bg-[#090b11] border border-white/[0.04] rounded-2xl overflow-hidden shadow-2xl relative">
+		<div class="flex items-center gap-2 px-5 py-3 border-b border-white/[0.03] bg-white/[0.005]">
+			<Terminal size={12} class="text-blue-400" />
+			<span class="text-[10px] font-bold tracking-wider uppercase font-mono text-slate-300">Live Application Logs</span>
+		</div>
+		<div class="p-5 max-h-48 overflow-y-auto font-mono text-[10px] text-slate-400 space-y-1">
+			{#if logs.length === 0}
+				<div class="text-slate-600 text-center py-6">No logs streamed yet. Start doing activities...</div>
+			{:else}
+				{#each logs as log}
+					<div class="truncate select-text">{cleanLogLine(log)}</div>
+				{/each}
+			{/if}
 		</div>
 	</div>
 </div>

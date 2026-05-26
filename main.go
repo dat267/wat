@@ -1,10 +1,10 @@
 package main
 
 import (
-	"embed"
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+  "embed"
+  "github.com/wailsapp/wails/v2"
+  "github.com/wailsapp/wails/v2/pkg/options"
+  "github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
 //go:embed all:frontend/dist
@@ -16,10 +16,13 @@ func main() {
 		return
 	}
 	app := NewApp()
+	app.isGUI = true
+	defer stopScheduler()
 	err := wails.Run(&options.App{
-		Title:  "wat",
-		Width:  1024,
-		Height: 768,
+		Title:            "wat",
+		Width:            1024,
+		Height:           768,
+		WindowStartState: options.Maximised,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

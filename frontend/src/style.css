@@ -10,6 +10,8 @@
 	--text-white: #09090b;
 	--color-primary: #18181b;
 	--color-glow: rgba(24, 24, 27, 0.02);
+	--scrollbar-thumb: rgba(9, 9, 11, 0.1);
+	--scrollbar-thumb-hover: rgba(9, 9, 11, 0.2);
 }
 :root.dark {
 	--bg-base: #0c0f18;
@@ -21,6 +23,8 @@
 	--text-white: #ffffff;
 	--color-primary: #3b82f6;
 	--color-glow: rgba(59, 130, 246, 0.05);
+	--scrollbar-thumb: rgba(255, 255, 255, 0.08);
+	--scrollbar-thumb-hover: rgba(255, 255, 255, 0.16);
 }
 @theme {
 	--font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
@@ -58,11 +62,11 @@ html, body, #app {
 	background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.05);
+	background: var(--scrollbar-thumb);
 	border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.12);
+	background: var(--scrollbar-thumb-hover);
 }
 select option {
 	background-color: var(--bg-base);
